@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Scraper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-link active" data-tab="scraper">Scraper</button>
+            <button class="tab-link" data-tab="extractor">Extractor</button>
+        </div>
+
+        <div id="scraper" class="tab-content active">
+            <h1>GitHub Email Scraper</h1>
+            <form id="scrape-form">
+                <div class="form-group">
+                    <label for="query">Search Query</label>
+                    <input type="text" id="query" name="query" value="software license key OR license server" required>
+                </div>
+                <div class="form-group">
+                    <label for="max_repos">Max Repositories</label>
+                    <input type="number" id="max_repos" name="max_repos" value="50" min="1" max="1000">
+                </div>
+                <div class="form-group">
+                    <label for="workers">Workers</label>
+                    <input type="number" id="workers" name="workers" value="10" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label for="output">Output File</label>
+                    <input type="text" id="output" name="output" value="github_leads.csv">
+                </div>
+                <div class="form-group">
+                    <label for="token">GitHub Token (optional)</label>
+                    <input type="password" id="token" name="token" placeholder="Overrides environment variable">
+                </div>
+                <button type="submit" id="submit-btn">
+                    <span class="btn-text">Scrape</span>
+                    <span class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            <div id="status" class="status-message"></div>
+            <div id="progress-container" style="display: none;">
+                <div id="progress-bar"></div>
+            </div>
+            <div id="results-container" style="display: none;">
+                <div class="results-header">
+                    <h2>Results</h2>
+                    <button id="copy-btn">Copy as CSV</button>
+                </div>
+                <table id="results-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Name</th>
+                            <th data-sort="email">Email</th>
+                            <th data-sort="repo">Repository</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="extractor" class="tab-content">
+            <h1>Extract Emails from CSV</h1>
+            <form id="extract-form">
+                <div class="form-group">
+                    <label for="csv-file">Upload CSV File</label>
+                    <input type="file" id="csv-file" name="csv_file" accept=".csv" required>
+                </div>
+                <button type="submit" id="extract-btn">Extract Emails</button>
+            </form>
+            <div id="extracted-emails-container" style="display: none;">
+                <h2>Extracted Emails</h2>
+                <textarea id="extracted-emails" rows="10" readonly></textarea>
+                <button id="copy-emails-btn">Copy Emails</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
