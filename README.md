@@ -1,4 +1,4 @@
-# GitHub Email Scraper (Show-All Mode)
+# GitHub Leads Scraper
 
 Single-page tool that streams repository owner emails from the explicit GitHub search queries you supply (one per line). No scoring, no filtering heuristics – every repository returned by GitHub for your queries is processed and any commit/public emails discovered are emitted.
 
