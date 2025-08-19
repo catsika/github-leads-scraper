@@ -1,19 +1,21 @@
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, send_from_directory
 import sys
 import os
 import requests
 from dotenv import load_dotenv
-from argparse import Namespace
 import json
 import time
 import csv
 import re
 
-load_dotenv()
+# Add project root to path for imports when running inside web_ui
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-# Add the parent directory to the Python path to import the scraper
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from scrap import run_scraper
+from customer_scraper import stream_customer_scrape
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -22,66 +24,44 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
-@app.route('/scrape', methods=['POST'])
-def scrape():
-    data = request.get_json()
-    query = data.get('query')
-    max_repos = int(data.get('max_repos', 100))
-    workers = int(data.get('workers', 10))
-    output_file = data.get('output', 'github_licensing_leads.csv')
-    token = data.get('token')
+@app.route('/scrape/customers', methods=['POST'])
+def scrape_customers():
+    data = request.get_json(force=True)
+    params = {
+        'token': data.get('token'),
+        'max_repos_per_query': data.get('max_repos_per_query', 30),
+        'queries_raw': data.get('queries_raw', '').strip(),
+        'output_filename': data.get('output_filename', 'leads.csv')
+    }
 
-    args = Namespace(
-        query=query,
-        max_repos=max_repos,
-        workers=workers,
-        output=output_file,
-        token=token
-    )
+    # Validate presence of queries
+    if not params['queries_raw']:
+        return jsonify({'phase': 'error', 'error': 'No queries supplied.'}), 400
 
-    def generate(args):
-        try:
-            for progress_update in run_scraper(args):
-                yield f"{json.dumps(progress_update)}\n"
-                time.sleep(0.1)
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 403:
-                yield f'{json.dumps({"error": "GitHub API rate limit exceeded or token is invalid."})}\n'
-            else:
-                yield f'{json.dumps({"error": f"An HTTP error occurred: {e}"})}\n'
-        except Exception as e:
-            yield f'{json.dumps({"error": f"An unexpected error occurred: {e}"})}\n'
+    def generate():
+        empty = True
+        for update in stream_customer_scrape(params):
+            empty = False
+            yield json.dumps(update) + "\n"
+            time.sleep(0.05)
+        if empty:
+            yield json.dumps({'phase': 'error', 'error': 'No output generated.'})+"\n"
+    return Response(generate(), mimetype='application/json')
 
-    return Response(generate(args), mimetype='application/json')
+@app.route('/<filename>')
+def download_csv(filename):
+    # Security: only allow CSV files and prevent path traversal
+    if not filename.endswith('.csv') or '/' in filename or '\\' in filename:
+        return jsonify({'error': 'Invalid filename'}), 400
+    
+    root = os.path.dirname(os.path.abspath(__file__))
+    parent = os.path.dirname(root)
+    path = os.path.join(parent, filename)
+    
+    if os.path.exists(path):
+        return send_from_directory(parent, filename, as_attachment=True)
+    return jsonify({'error': 'File not found'}), 404
 
-@app.route('/extract', methods=['POST'])
-def extract():
-    try:
-        if 'csv_file' not in request.files:
-            return jsonify({"success": False, "message": "No file part"})
-        
-        file = request.files['csv_file']
-        
-        if file.filename == '':
-            return jsonify({"success": False, "message": "No selected file"})
-
-        if file and file.filename.endswith('.csv'):
-            emails = set()
-            stream = file.stream.read().decode("utf-8")
-            reader = csv.reader(stream.splitlines())
-            header = next(reader)
-            email_idx = header.index('email')
-
-            for row in reader:
-                email = row[email_idx]
-                if not email.endswith(".local") and re.match(r"[^@]+@[^@]+\.[^@]+", email):
-                    cleaned_email = re.sub(r'[<>]', '', email)
-                    emails.add(cleaned_email)
-            
-            return jsonify({"success": True, "emails": list(emails)})
-
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5001)

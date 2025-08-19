@@ -1,64 +1,67 @@
-# GitHub Email Scraper
+# GitHub Email Scraper (Show-All Mode)
 
-This project is a powerful and flexible tool for scraping email addresses from GitHub repositories. It features a web-based user interface for ease of use, as well as a command-line interface for more advanced users.
+Single-page tool that streams repository owner emails from the explicit GitHub search queries you supply (one per line). No scoring, no filtering heuristics – every repository returned by GitHub for your queries is processed and any commit/public emails discovered are emitted.
+
+> Email sending / campaign features live in a separate repository.
+> Email sender repo: https://github.com/<your-org>/email-sender
 
 ## Features
+- Explicit queries only (textarea, one GitHub search query per line)
+- Streams all repositories returned for each query (up to your specified per‑query cap)
+- Live streaming updates (queries_received, query_start, lead_added, progress, finished, no_email, query_empty, error)
+- Writes `leads.csv` (also downloadable at /leads.csv)
 
-- **Web Interface**: A clean, modern, and intuitive web UI for running the scraper and extracting emails.
-- **Command-Line Interface**: A powerful CLI for advanced users and automation.
-- **Multithreaded**: Uses multithreading to scrape multiple repositories concurrently for maximum speed.
-- **Email Extraction**: A feature to extract and clean email addresses from a CSV file.
-- **Persistent Token Storage**: Securely saves your GitHub token in your browser's local storage for convenience.
-- **Real-time Progress**: A real-time progress bar to monitor the scraping process.
-- **Interactive Results**: Sortable results table and a "Copy to Clipboard" feature.
-- **Robust Validation**: Advanced email validation and cleaning to ensure data quality.
-
-## Setup
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd simple-gitbub-scrapper
-    ```
-
-2.  **Create a virtual environment:**
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
-
-3.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Create a `.env` file:**
-    Create a file named `.env` in the root of the project and add your GitHub personal access token:
-    ```
-    GITHUB_TOKEN=your_token_here
-    ```
-
-## Usage
-
-### Web Interface
-
-To use the web interface, run the following command:
-
+## Quick Start
 ```bash
+git clone <repository-url>
+cd github-email-scraper
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+echo "GITHUB_TOKEN=your_token_here" > .env  # optional but recommended
 python web_ui/app.py
 ```
+Open http://127.0.0.1:5001 and paste queries (one per line) then Start.
 
-Then, open your web browser and navigate to `http://127.0.0.1:5001`.
-
-### Command-Line Interface
-
-The `scrap.py` script can be run directly from the command line with various arguments:
-
-```bash
-python scrap.py --query "your query" --max-repos 50 --output my_leads.csv
+## Example Queries
 ```
+electron stars:>20 in:description
+desktop stars:>30
+blender addon stars:>15
+unity plugin stars:>25
+"upgrade" stars:>40 language:typescript
+```
+Tips:
+- Use stars thresholds (stars:>20) to surface active repos
+- Add language: or in:description constraints to focus
+- Everything returned by GitHub for your queries will stream; refine queries for relevance
 
-For a full list of options, run:
+## Minimal API
+POST /scrape/customers
+```json
+{
+  "token": "<optional PAT>",
+  "max_repos_per_query": 30,
+  "queries_raw": "electron stars:>20 in:description\ndesktop stars:>30"
+}
+```
+Response is streamed NDJSON (one JSON object per line).
 
-```bash
-python scrap.py --help
+Download final CSV: GET /leads.csv
+
+## Output Columns
+email, github_username, name, repository, repo_description, repo_stars, repo_language, company, bio
+
+## Behavior
+- No scoring or filtering: every repo returned is inspected
+- Commit author emails (excluding obvious generic/noreply) are collected (first valid email per repo owner)
+- Falls back to the owner's public profile email if no commit email found
+- Duplicate emails are skipped (first occurrence kept)
+
+## Notes
+- Provide focused queries; broad queries produce large volumes quickly
+- Use a GitHub token to avoid low rate limits
+- `leads.csv` is git-ignored (avoid committing emails)
+
+## License
+MIT

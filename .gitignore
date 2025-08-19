@@ -1,14 +1,16 @@
 # Environment variables
 .env
 
-# Python virtual environment
+# Python virtual environments
 .venv/
 venv/
 __pycache__/
 *.pyc
 
-# CSV files
+# Generated leads export (ignored to avoid committing personal data)
+leads.csv
 *.csv
 
-# OS-specific files
+# OS/editor
 .DS_Store
+.vscode/

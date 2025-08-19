@@ -3,84 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Scraper</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Lead Scraper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='modern_style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="container">
-        <div class="tabs">
-            <button class="tab-link active" data-tab="scraper">Scraper</button>
-            <button class="tab-link" data-tab="extractor">Extractor</button>
-        </div>
+<body class="minimal">
+    <div class="app-container minimal-container">
+        <header class="minimal-header">Lead Scraper <span class="mini-sub">Fast GitHub email extraction</span></header>
+        <main class="minimal-main">
+            <section class="minimal-config">
+                <form id="scrapeForm" class="minimal-form">
+                    <label class="minimal-label" for="queries">Queries (one per line)</label>
+                    <textarea id="queries" rows="6" class="minimal-input" placeholder="electron stars:>25&#10;unity plugin stars:>30"></textarea>
+                    <div class="mini-hint">Use GitHub search syntax (e.g. <code>language:go stars:>50 cli</code>)</div>
+                    <div class="sample-row">
+                        <select id="sampleSelect" class="minimal-input mini-select">
+                            <option value="" disabled selected>Insert sample query set...</option>
+                            <option value="electron stars:>25\nunity plugin stars:>30\nblender addon stars:>20">Desktop / Plugins</option>
+                            <option value="cli tool language:go stars:>40\n"upgrade" language:typescript stars:>60">CLI & Upgrade</option>
+                            <option value="blender addon stars:>25\nfigma plugin stars:>30">Design Extensions</option>
+                        </select>
+                        <button type="button" id="insertSamples" class="minimal-btn">Insert</button>
+                    </div>
+                    <div class="minimal-row">
+                        <div class="minimal-field">
+                            <label class="minimal-sublabel" for="token">Token</label>
+                            <input type="password" id="token" class="minimal-input" placeholder="ghp_...">
+                        </div>
+                        <div class="minimal-field">
+                            <label class="minimal-sublabel" for="maxRepos">Max Repos</label>
+                            <input type="number" id="maxRepos" class="minimal-input" value="30" min="1" max="100">
+                        </div>
+                        <div class="minimal-field">
+                            <label class="minimal-sublabel" for="outputFilename">Filename</label>
+                            <input type="text" id="outputFilename" class="minimal-input" value="leads.csv">
+                        </div>
+                    </div>
 
-        <div id="scraper" class="tab-content active">
-            <h1>GitHub Email Scraper</h1>
-            <form id="scrape-form">
-                <div class="form-group">
-                    <label for="query">Search Query</label>
-                    <input type="text" id="query" name="query" value="software license key OR license server" required>
-                </div>
-                <div class="form-group">
-                    <label for="max_repos">Max Repositories</label>
-                    <input type="number" id="max_repos" name="max_repos" value="50" min="1" max="1000">
-                </div>
-                <div class="form-group">
-                    <label for="workers">Workers</label>
-                    <input type="number" id="workers" name="workers" value="10" min="1" max="20">
-                </div>
-                <div class="form-group">
-                    <label for="output">Output File</label>
-                    <input type="text" id="output" name="output" value="github_leads.csv">
-                </div>
-                <div class="form-group">
-                    <label for="token">GitHub Token (optional)</label>
-                    <input type="password" id="token" name="token" placeholder="Overrides environment variable">
-                </div>
-                <button type="submit" id="submit-btn">
-                    <span class="btn-text">Scrape</span>
-                    <span class="spinner" style="display: none;"></span>
-                </button>
-            </form>
-            <div id="status" class="status-message"></div>
-            <div id="progress-container" style="display: none;">
-                <div id="progress-bar"></div>
-            </div>
-            <div id="results-container" style="display: none;">
-                <div class="results-header">
-                    <h2>Results</h2>
-                    <button id="copy-btn">Copy as CSV</button>
-                </div>
-                <table id="results-table">
+                    <div class="minimal-actions">
+                        <button type="submit" id="startBtn" class="minimal-btn primary">
+                            <span id="startLabel">Start</span>
+                            <span class="mini-spinner" id="loadingSpinner"></span>
+                        </button>
+                        <button type="button" id="clearBtn" class="minimal-btn" disabled>Clear</button>
+                        <button type="button" id="downloadBtn" class="minimal-btn" disabled>Download</button>
+                    </div>
+
+                    <div id="errorBanner" class="minimal-error" style="display:none;">
+                        <span id="errorMessage"></span>
+                    </div>
+
+                    <div id="progressContainer" class="mini-progress" style="display:none;">
+                        <div class="mini-bar">
+                            <div id="progressFill" class="mini-fill"></div>
+                        </div>
+                        <div id="progressText" class="mini-text">Ready</div>
+                    </div>
+
+                    <div class="mini-stats" id="miniStats">
+                        <div><strong id="totalLeads">0</strong> leads</div>
+                        <div><span id="currentQuery">0/0</span> queries</div>
+                        <div><span id="progressPercent">0%</span> done</div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="minimal-results">
+                <table class="minimal-table" id="resultsTable">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name</th>
-                            <th data-sort="email">Email</th>
-                            <th data-sort="repo">Repository</th>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Repository</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="resultsBody">
+                        <tr class="empty-state">
+                            <td colspan="3" class="empty-cell">No leads yet</td>
+                        </tr>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
-        <div id="extractor" class="tab-content">
-            <h1>Extract Emails from CSV</h1>
-            <form id="extract-form">
-                <div class="form-group">
-                    <label for="csv-file">Upload CSV File</label>
-                    <input type="file" id="csv-file" name="csv_file" accept=".csv" required>
-                </div>
-                <button type="submit" id="extract-btn">Extract Emails</button>
-            </form>
-            <div id="extracted-emails-container" style="display: none;">
-                <h2>Extracted Emails</h2>
-                <textarea id="extracted-emails" rows="10" readonly></textarea>
-                <button id="copy-emails-btn">Copy Emails</button>
-            </div>
-        </div>
+            </section>
+        </main>
+        <footer class="minimal-footer">&copy; 2025 • Minimal mode</footer>
     </div>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='modern_script.js') }}"></script>
 </body>
 </html>
