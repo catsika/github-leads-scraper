@@ -14,7 +14,7 @@ Single-page tool that streams repository owner emails from the explicit GitHub s
 ## Quick Start
 ```bash
 git clone <repository-url>
-cd github-email-scraper
+cd github-leads-scraper
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
