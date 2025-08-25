@@ -2,9 +2,6 @@
 
 Single-page tool that streams repository owner emails from the explicit GitHub search queries you supply (one per line). No scoring, no filtering heuristics – every repository returned by GitHub for your queries is processed and any commit/public emails discovered are emitted.
 
-> Email sending / campaign features live in a separate repository.
-> Email sender repo: https://github.com/<your-org>/email-sender
-
 ## Features
 - Explicit queries only (textarea, one GitHub search query per line)
 - Streams all repositories returned for each query (up to your specified per‑query cap)
